@@ -7,7 +7,11 @@ on:
 
 env:
   AWS_REGION: ap-southeast-2
-  ECR_REPOSITORY: node-ecs-cicd    
+  ECR_REPOSITORY: node-ecs-cicd   
+  ECS_SERVICE: node-ecs-cicd                     # name of the service
+  ECS_CLUSTER: node-ecs-cicd                     # name of the cluster
+  ECS_TASK_DEFINITION: .aws/task-definition.json # path of the JSON task definition
+  CONTAINER_NAME: "app" 
 
 jobs:
   deploy:
@@ -35,6 +39,7 @@ jobs:
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
+          
         run: |
           # Build a docker container and
           # push it to ECR so that it can
@@ -42,3 +47,19 @@ jobs:
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+      - name: Fill in the new image ID in the Amazon ECS task definition
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@c804dfbdd57f713b6c079302a4c01db7017a36fc
+        with:
+          task-definition: ${{ env.ECS_TASK_DEFINITION }}
+          container-name: ${{ env.CONTAINER_NAME }}
+          image: ${{ steps.build-image.outputs.image }}
+
+      - name: Deploy Amazon ECS task definition
+        uses: aws-actions/amazon-ecs-deploy-task-definition@df9643053eda01f169e64a0e60233aacca83799a
+        with:
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          service: ${{ env.ECS_SERVICE }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true
