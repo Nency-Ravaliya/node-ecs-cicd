@@ -11,7 +11,7 @@ env:
   ECS_SERVICE: node-ecs-cicd-service                     # name of the service
   ECS_CLUSTER: node-ecs-cicd                     # name of the cluster
   ECS_TASK_DEFINITION: .aws/task_definition.json # path of the JSON task definition
-  CONTAINER_NAME: "app" 
+  CONTAINER_NAME: "node-ecs-cicd" 
 
 jobs:
   deploy:
